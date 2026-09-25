@@ -14,30 +14,46 @@ import AuthHeader from "../components/AuthHeader";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password) {
+  const handleRegister = async () => {
+    if (!email.trim() || !password || !repeatPassword) {
       Alert.alert("Ошибка", "Заполните все поля");
+      return;
+    }
+    if (password !== repeatPassword) {
+      Alert.alert("Ошибка", "Пароли не совпадают");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Ошибка", "Пароль должен быть не менее 6 символов");
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        // options: {
+        //   emailRedirectTo: "ets://auth/callback",
+        // },
       });
 
       if (error) {
-        Alert.alert("Ошибка входа", error.message);
+        Alert.alert("Ошибка регистрации", error.message);
         return;
       }
 
-      router.replace("/timer");
+      // router.push({
+      //   pathname: "/verify-email",
+      //   params: { email },
+      // });
+      router.replace("/profile-setup");
     } catch {
       Alert.alert("Ошибка", "Не удалось подключиться. Проверьте интернет.");
     } finally {
@@ -56,10 +72,10 @@ export default function Login() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <AuthHeader title="Вход" />
+        <AuthHeader title="Регистрация" />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Логин</Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -79,19 +95,35 @@ export default function Login() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            autoComplete="password"
-            textContentType="password"
-            onSubmitEditing={handleLogin}
+            autoComplete="new-password"
+            textContentType="newPassword"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Повторите пароль</Text>
+          <TextInput
+            style={styles.input}
+            value={repeatPassword}
+            onChangeText={setRepeatPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            onSubmitEditing={handleRegister}
             returnKeyType="go"
           />
         </View>
 
-        <Button title="Войти" onPress={handleLogin} loading={loading} />
+        <Button
+          title="Зарегистрироваться"
+          onPress={handleRegister}
+          loading={loading}
+        />
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Нет аккаунта? </Text>
-          <Link href="/register" style={styles.link} replace>
-            Регистрируйтесь
+          <Text style={styles.footerText}>Зарегистрированы? </Text>
+          <Link href="/" style={styles.link} replace>
+            Войти
           </Link>
         </View>
       </ScrollView>
