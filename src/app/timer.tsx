@@ -19,6 +19,11 @@ export default function Timer() {
   const [isRunning, setIsRunning] = useState(false);
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [checking, setChecking] = useState(false);
+  const [debugCoords, setDebugCoords] = useState<{
+    lat: number;
+    lon: number;
+    accuracy: number | null;
+  } | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
@@ -35,6 +40,23 @@ export default function Timer() {
         .single();
 
       if (profile?.clinics) setClinic(profile.clinics as unknown as Clinic);
+    })();
+  }, []);
+
+  // Fetch device location once on mount, just to display it for debugging.
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setDebugCoords({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      });
     })();
   }, []);
 
@@ -78,6 +100,12 @@ export default function Timer() {
       accuracy: Location.Accuracy.High,
     });
 
+    setDebugCoords({
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+    });
+
     if (!isWithinGeofence(pos.coords.latitude, pos.coords.longitude)) {
       Alert.alert(
         "Вы не на территории клиники",
@@ -92,11 +120,16 @@ export default function Timer() {
 
     watchRef.current = await Location.watchPositionAsync(
       {
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Highest,
         timeInterval: 30000,
         distanceInterval: 15,
       },
       (loc) => {
+        setDebugCoords({
+          lat: loc.coords.latitude,
+          lon: loc.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        });
         if (!isWithinGeofence(loc.coords.latitude, loc.coords.longitude)) {
           handleStop(true);
         }
@@ -139,6 +172,37 @@ export default function Timer() {
         <Ionicons name="settings-outline" size={28} color="#333" />
       </Pressable>
 
+      {/* Debug: device coordinates, clinic coordinates and distance between them */}
+      <View style={styles.debugCoords}>
+        <Text style={styles.debugText}>
+          {debugCoords
+            ? `Устройство: ${debugCoords.lat.toFixed(6)}, ${debugCoords.lon.toFixed(6)}`
+            : "Устройство: получение координат..."}
+        </Text>
+        <Text style={styles.debugText}>
+          {clinic
+            ? `Клиника: ${clinic.latitude.toFixed(6)}, ${clinic.longitude.toFixed(6)}`
+            : "Клиника: не назначена"}
+        </Text>
+        <Text style={styles.debugText}>
+          {debugCoords && clinic
+            ? `Расстояние: ${Math.round(
+                getDistanceMeters(
+                  debugCoords.lat,
+                  debugCoords.lon,
+                  clinic.latitude,
+                  clinic.longitude,
+                ),
+              )} м (буфер ${clinic.radius_meters} м)`
+            : "Расстояние: —"}
+        </Text>
+        <Text style={styles.debugText}>
+          {debugCoords
+            ? `Точность: ±${debugCoords.accuracy?.toFixed(0) ?? "?"} м`
+            : "Точность: —"}
+        </Text>
+      </View>
+
       {clinic && <Text style={styles.clinicName}>{clinic.name}</Text>}
       <Text style={styles.timerText}>{formatTime(seconds)}</Text>
 
@@ -178,6 +242,15 @@ const styles = StyleSheet.create({
   clinicName: {
     fontSize: 16,
     color: "#666",
+  },
+  debugCoords: {
+    position: "absolute",
+    top: 100,
+    alignItems: "center",
+  },
+  debugText: {
+    fontSize: 12,
+    color: "#999",
   },
   buttons: {
     flexDirection: "row",
