@@ -1,51 +1,71 @@
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
-import { supabase } from "../../lib/supabase";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { handleAuthUrl, isAuthLink } from "../../lib/authLink";
+
+const TIMEOUT_MS = 10_000;
 
 export default function AuthCallback() {
-  const [error, setError] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ error?: string }>();
+  const url = Linking.useURL();
+  const [error, setError] = useState<string | null>(params.error ?? null);
 
   useEffect(() => {
-    const handle = async () => {
-      const url = await Linking.getInitialURL();
-      if (!url) {
-        setError("Ссылка не найдена");
-        return;
-      }
+    if (params.error) {
+      setError(params.error);
+      return;
+    }
 
-      const { error } = await supabase.auth.exchangeCodeForSession(url);
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      router.replace("/profile-setup");
+    let cancelled = false;
+    const run = async (link: string | null) => {
+      if (!isAuthLink(link)) return;
+      const failure = await handleAuthUrl(link);
+      if (cancelled) return;
+      if (failure) setError(failure);
+      else router.replace("/profile-setup");
     };
 
-    handle();
-  }, []);
+    run(url);
+    Linking.getInitialURL().then(run);
+
+    // never spin forever
+    const timer = setTimeout(() => {
+      if (!cancelled) setError("Не удалось обработать ссылку. Войдите заново.");
+    }, TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [url, params.error]);
 
   if (error) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          padding: 20,
-        }}
-      >
-        <Text>Ошибка подтверждения: {error}</Text>
+      <View style={styles.container}>
+        <Text style={styles.text}>Ошибка подтверждения: {error}</Text>
+        <Link href="/" replace style={styles.link}>
+          Вернуться ко входу
+        </Link>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+    <View style={styles.container}>
       <ActivityIndicator size="large" />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    gap: 16,
+  },
+  text: { textAlign: "center", fontSize: 16 },
+  link: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+});

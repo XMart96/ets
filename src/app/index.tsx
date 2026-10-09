@@ -1,5 +1,5 @@
 import { Link, router, Stack } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,12 +12,31 @@ import {
 } from "react-native";
 import AuthHeader from "../components/AuthHeader";
 import Button from "../components/Button";
-import { supabase } from "../lib/supabase";
+import { REDIRECT_URL, supabase } from "../lib/supabase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Signed in: director goes to the report, employee to the timer if the
+  // profile is filled in, profile setup otherwise.
+  const routeAfterAuth = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!data) router.replace("/profile-setup");
+    else router.replace(data.role === "root" ? "/admin" : "/timer");
+  };
+
+  // Already signed in: skip the login screen.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) routeAfterAuth(data.session.user.id);
+    });
+  }, []);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -27,17 +46,30 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (error) {
+        // Registered but never confirmed: send a fresh link
+        if (error.code === "email_not_confirmed") {
+          await supabase.auth.resend({
+            type: "signup",
+            email: email.trim(),
+            options: { emailRedirectTo: REDIRECT_URL },
+          });
+          router.push({
+            pathname: "/verify-email",
+            params: { email: email.trim() },
+          });
+          return;
+        }
         Alert.alert("Ошибка входа", error.message);
         return;
       }
 
-      router.replace("/timer");
+      await routeAfterAuth(data.user.id);
     } catch {
       Alert.alert("Ошибка", "Не удалось подключиться. Проверьте интернет.");
     } finally {

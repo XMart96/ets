@@ -1,20 +1,16 @@
-import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import Button from "../components/Button";
-import { useClinics } from "../hooks/useClinics";
+import Input from "../components/Input";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileEdit() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [clinicId, setClinicId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-
-  const { clinics, loading: clinicsLoading } = useClinics();
 
   useEffect(() => {
     (async () => {
@@ -26,21 +22,20 @@ export default function ProfileEdit() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("first_name, last_name, clinic_id")
+        .select("first_name, last_name")
         .eq("id", userData.user.id)
         .single();
 
       if (!error && data) {
         setFirstName(data.first_name);
         setLastName(data.last_name);
-        setClinicId(data.clinic_id);
       }
       setLoading(false);
     })();
   }, []);
 
   const handleSave = async () => {
-    if (!firstName.trim() || !lastName.trim() || !clinicId) {
+    if (!firstName.trim() || !lastName.trim()) {
       Alert.alert("Заполните все поля");
       return;
     }
@@ -55,7 +50,6 @@ export default function ProfileEdit() {
         .update({
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          clinic_id: clinicId,
         })
         .eq("id", userData.user.id);
 
@@ -107,33 +101,12 @@ export default function ProfileEdit() {
     <View style={styles.container}>
       <Text style={styles.title}>Редактировать профиль</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Имя"
-        value={firstName}
-        onChangeText={setFirstName}
-      />
-      <TextInput
-        style={styles.input}
+      <Input placeholder="Имя" value={firstName} onChangeText={setFirstName} />
+      <Input
         placeholder="Фамилия"
         value={lastName}
         onChangeText={setLastName}
       />
-
-      {clinicsLoading ? (
-        <Text>Загрузка клиник...</Text>
-      ) : (
-        <Picker
-          selectedValue={clinicId}
-          onValueChange={setClinicId}
-          style={styles.picker}
-        >
-          <Picker.Item label="Выберите клинику" value={null} />
-          {clinics.map((c) => (
-            <Picker.Item key={c.id} label={c.name} value={c.id} />
-          ))}
-        </Picker>
-      )}
 
       <Button title="Сохранить" onPress={handleSave} loading={saving} />
       <Button
@@ -144,6 +117,12 @@ export default function ProfileEdit() {
       />
 
       <View style={styles.footer}>
+        <Button
+          title="Сменить пароль"
+          variant="secondary"
+          onPress={() => router.push("/change-password")}
+          disabled={saving || signingOut}
+        />
         <Button
           title="Выйти из аккаунта"
           variant="danger"
@@ -159,12 +138,11 @@ export default function ProfileEdit() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 20, gap: 16 },
   title: { fontSize: 22, fontWeight: "bold", textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
-  picker: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8 },
   footer: {
     marginTop: 24,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#eee",
+    gap: 16,
   },
 });

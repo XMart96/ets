@@ -43,3 +43,19 @@ example
 # generated native folders
 /ios
 /android
+
+# Supabase (local SQL migrations, kept out of the repo)
+supabase/
+
+# env files (keep an example file tracked)
+.env.*
+!.env.example
+
+# build artifacts
+*.apk
+*.aab
+*.ipa
+
+# editors / local tooling
+.idea/
+.claude/settings.local.json

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import AuthHeader from "../components/AuthHeader";
 import Button from "../components/Button";
-import { supabase } from "../lib/supabase";
+import { REDIRECT_URL, supabase } from "../lib/supabase";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -36,12 +36,10 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        // options: {
-        //   emailRedirectTo: "ets://auth/callback",
-        // },
+        options: { emailRedirectTo: REDIRECT_URL },
       });
 
       if (error) {
@@ -49,11 +47,23 @@ export default function Register() {
         return;
       }
 
-      // router.push({
-      //   pathname: "/verify-email",
-      //   params: { email },
-      // });
-      router.replace("/profile-setup");
+      // For an already registered email Supabase returns no error but a user
+      // without identities, and sends no code.
+      if (data.user && data.user.identities?.length === 0) {
+        Alert.alert("Ошибка", "Этот email уже зарегистрирован. Войдите.");
+        return;
+      }
+
+      // "Confirm email" off: signed in right away
+      if (data.session) {
+        router.replace("/profile-setup");
+        return;
+      }
+
+      router.push({
+        pathname: "/verify-email",
+        params: { email: email.trim() },
+      });
     } catch {
       Alert.alert("Ошибка", "Не удалось подключиться. Проверьте интернет.");
     } finally {

@@ -8,7 +8,11 @@
     "scheme": "ets",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.khachatur.ets",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.khachatur.ets",
+      "permissions": [
+        "android.permission.NFC"
+      ]
     },
     "web": {
       "output": "static",
@@ -32,11 +40,24 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "Приложению нужен NFC, чтобы считать метку клиники при начале смены"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "014380e3-c25a-43df-9788-33c9f3f740d1"
+      }
+    },
+    "owner": "khachatur.martirosyan"
   }
 }
