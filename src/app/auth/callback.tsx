@@ -1,7 +1,8 @@
 import * as Linking from "expo-linking";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import Loader from "../../components/Loader";
 import { handleAuthUrl, isAuthLink } from "../../lib/authLink";
 
 const TIMEOUT_MS = 10_000;
@@ -53,7 +54,7 @@ export default function AuthCallback() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" />
+      <Loader />
     </View>
   );
 }

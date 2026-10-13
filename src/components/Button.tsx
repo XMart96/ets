@@ -48,7 +48,9 @@ export default function Button({
       ) : (
         <View style={styles.content}>
           {Icon ? <Icon size={18} color="#fff" /> : null}
-          <Text style={styles.text}>{title}</Text>
+          <Text style={styles.text} numberOfLines={1} adjustsFontSizeToFit>
+            {title}
+          </Text>
         </View>
       )}
     </Pressable>

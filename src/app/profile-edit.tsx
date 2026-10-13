@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import Loader from "../components/Loader";
 import KeyboardScrollView from "../components/KeyboardScrollView";
 import { supabase } from "../lib/supabase";
 
@@ -94,7 +95,7 @@ export default function ProfileEdit() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text>Загрузка...</Text>
+        <Loader />
       </View>
     );
   }

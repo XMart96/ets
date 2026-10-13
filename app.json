@@ -46,7 +46,8 @@
         {
           "nfcPermission": "Приложению нужен NFC, чтобы считать метку клиники при начале смены"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
