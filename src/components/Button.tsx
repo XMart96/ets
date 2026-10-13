@@ -1,9 +1,11 @@
+import type { LucideIcon } from "lucide-react-native";
 import {
   ActivityIndicator,
   Pressable,
   PressableProps,
   StyleSheet,
   Text,
+  View,
   ViewStyle,
 } from "react-native";
 
@@ -11,6 +13,7 @@ type Variant = "primary" | "secondary" | "danger";
 
 interface ButtonProps extends Omit<PressableProps, "style" | "children"> {
   title: string;
+  icon?: LucideIcon;
   variant?: Variant;
   loading?: boolean;
   style?: ViewStyle;
@@ -18,6 +21,7 @@ interface ButtonProps extends Omit<PressableProps, "style" | "children"> {
 
 export default function Button({
   title,
+  icon: Icon,
   variant = "primary",
   loading = false,
   disabled,
@@ -42,7 +46,10 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color="#fff" />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <View style={styles.content}>
+          {Icon ? <Icon size={18} color="#fff" /> : null}
+          <Text style={styles.text}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -59,6 +66,7 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: "#65BCE6" },
   secondary: { backgroundColor: "#64748b" },
   danger: { backgroundColor: "#dc2626" },
+  content: { flexDirection: "row", alignItems: "center", gap: 8 },
   pressed: { opacity: 0.8 },
   disabled: { opacity: 0.5 },
   text: { color: "#fff", fontSize: 16, fontWeight: "600" },

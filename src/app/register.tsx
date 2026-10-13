@@ -2,16 +2,14 @@ import { Link, router, Stack } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import AuthHeader from "../components/AuthHeader";
 import Button from "../components/Button";
+import Input from "../components/Input";
+import KeyboardScrollView from "../components/KeyboardScrollView";
 import { REDIRECT_URL, supabase } from "../lib/supabase";
 
 export default function Register() {
@@ -72,57 +70,44 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
       >
         <AuthHeader title="Регистрация" />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
-        </View>
+        <Input
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+        />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Пароль</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            textContentType="newPassword"
-          />
-        </View>
+        <Input
+          label="Пароль"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+        />
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Повторите пароль</Text>
-          <TextInput
-            style={styles.input}
-            value={repeatPassword}
-            onChangeText={setRepeatPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            textContentType="newPassword"
-            onSubmitEditing={handleRegister}
-            returnKeyType="go"
-          />
-        </View>
+        <Input
+          label="Повторите пароль"
+          value={repeatPassword}
+          onChangeText={setRepeatPassword}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          onSubmitEditing={handleRegister}
+          returnKeyType="go"
+        />
 
         <Button
           title="Зарегистрироваться"
@@ -136,35 +121,17 @@ export default function Register() {
             Войти
           </Link>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   container: {
     flexGrow: 1,
     justifyContent: "center",
     padding: 20,
     gap: 16,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
   },
   footer: {
     flexDirection: "row",

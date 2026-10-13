@@ -1,8 +1,9 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text } from "react-native";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import KeyboardScrollView from "../components/KeyboardScrollView";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileSetup() {
@@ -42,7 +43,7 @@ export default function ProfileSetup() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Заполните профиль</Text>
 
       <Input placeholder="Имя" value={firstName} onChangeText={setFirstName} />
@@ -53,11 +54,11 @@ export default function ProfileSetup() {
       />
 
       <Button title="Сохранить" onPress={handleSave} loading={saving} />
-    </View>
+    </KeyboardScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, gap: 16 },
+  container: { flexGrow: 1, justifyContent: "center", padding: 20, gap: 16 },
   title: { fontSize: 22, fontWeight: "bold", textAlign: "center" },
 });

@@ -1,8 +1,10 @@
 import { router } from "expo-router";
+import { KeyRound, LogOut, Save, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import KeyboardScrollView from "../components/KeyboardScrollView";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileEdit() {
@@ -98,7 +100,7 @@ export default function ProfileEdit() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Редактировать профиль</Text>
 
       <Input placeholder="Имя" value={firstName} onChangeText={setFirstName} />
@@ -108,41 +110,56 @@ export default function ProfileEdit() {
         onChangeText={setLastName}
       />
 
-      <Button title="Сохранить" onPress={handleSave} loading={saving} />
-      <Button
-        title="Отмена"
-        variant="secondary"
-        onPress={() => router.back()}
-        disabled={saving}
-      />
+      <View style={styles.row}>
+        <Button
+          title="Сохранить"
+          icon={Save}
+          onPress={handleSave}
+          loading={saving}
+          style={styles.cell}
+        />
+        <Button
+          title="Отмена"
+          icon={X}
+          variant="secondary"
+          onPress={() => router.back()}
+          disabled={saving}
+          style={styles.cell}
+        />
+      </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.row, styles.footer]}>
         <Button
           title="Сменить пароль"
+          icon={KeyRound}
           variant="secondary"
           onPress={() => router.push("/change-password")}
           disabled={saving || signingOut}
+          style={styles.cell}
         />
         <Button
-          title="Выйти из аккаунта"
+          title="Выйти"
+          icon={LogOut}
           variant="danger"
           onPress={handleLogout}
           loading={signingOut}
           disabled={saving}
+          style={styles.cell}
         />
       </View>
-    </View>
+    </KeyboardScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20, gap: 16 },
+  container: { flexGrow: 1, justifyContent: "center", padding: 20, gap: 16 },
   title: { fontSize: 22, fontWeight: "bold", textAlign: "center" },
+  row: { flexDirection: "row", gap: 12 },
+  cell: { flex: 1 },
   footer: {
-    marginTop: 24,
+    marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    gap: 16,
   },
 });
