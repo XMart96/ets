@@ -1,5 +1,5 @@
 import { LoaderCircle } from "lucide-react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, Easing, StyleProp, ViewStyle } from "react-native";
 import { colors } from "@/theme";
 
@@ -15,7 +15,7 @@ export default function Loader({
   color = colors.primary,
   style,
 }: LoaderProps) {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     const loop = Animated.loop(

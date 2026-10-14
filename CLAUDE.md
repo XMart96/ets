@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm install`, `npm start` (`expo start`). `npm run lint` needs `eslint` + `eslint-config-expo`, which are not installed (`expo lint` offers to install them and edits `package.json`). No test runner is set up (tests deferred until requirements are agreed; later jest-expo). Type-check with `npx tsc --noEmit` (add `--noUnusedLocals` to catch dead imports). To check that Metro bundles (aliases, compiler) without a device: `npx expo export --platform android --output-dir <tmp>`.
+- `npm install`, `npm start` (`expo start`). `npm run lint` (eslint 9 + eslint-config-expo, `eslint.config.js`) is clean; keep it clean. It includes the React Compiler rules: no `Date.now()` / ref reads during render, no synchronous `setState` in effects (derive values instead). No test runner is set up (tests deferred until requirements are agreed; later jest-expo). Type-check with `npx tsc --noEmit` (add `--noUnusedLocals` to catch dead imports). To check that Metro bundles (aliases, compiler) without a device: `npx expo export --platform android --output-dir <tmp>`.
 - NFC (`react-native-nfc-manager`) does not work in Expo Go. Use a dev build: `npx expo run:android` or EAS (`eas.json` profiles: `development` / `preview` build Android APKs). UI-only work can still be checked in Expo Go (NFC is loaded lazily, see below).
 - Env (in `.env`, gitignored): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 - DB changes are SQL files in `supabase/migrations/` (dated names like `20261014_*.sql`), applied to the hosted Supabase project manually / via the Supabase MCP. There is no local Supabase stack.

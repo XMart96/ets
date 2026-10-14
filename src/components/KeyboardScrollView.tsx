@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import {
   Animated,
   Easing,
@@ -23,7 +23,7 @@ export default function KeyboardScrollView({
   children,
   contentContainerStyle,
 }: Props) {
-  const inset = useRef(new Animated.Value(0)).current;
+  const [inset] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     const ios = Platform.OS === "ios";

@@ -11,13 +11,11 @@ const TIMEOUT_MS = 10_000;
 export default function AuthCallback() {
   const params = useLocalSearchParams<{ error?: string }>();
   const url = Linking.useURL();
-  const [error, setError] = useState<string | null>(params.error ?? null);
+  const [linkError, setError] = useState<string | null>(null);
+  const error = params.error ?? linkError;
 
   useEffect(() => {
-    if (params.error) {
-      setError(params.error);
-      return;
-    }
+    if (params.error) return;
 
     let cancelled = false;
     const run = async (link: string | null) => {

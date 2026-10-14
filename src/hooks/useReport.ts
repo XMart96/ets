@@ -11,7 +11,8 @@ export function useReport<T>(
   pollMs: number | null = null,
 ) {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  // key whose first load has finished; loading = the current key is not it
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestRef = useRef(0);
@@ -36,8 +37,8 @@ export function useReport<T>(
 
   // `key` stands for everything the fetcher depends on: reload when it changes
   useEffect(() => {
-    setLoading(true);
-    load().finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load().finally(() => setLoadedKey(key));
   }, [load, key]);
 
   useEffect(() => {
@@ -52,5 +53,5 @@ export function useReport<T>(
     setRefreshing(false);
   };
 
-  return { data, loading, refreshing, error, refresh };
+  return { data, loading: loadedKey !== key, refreshing, error, refresh };
 }

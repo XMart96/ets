@@ -30,8 +30,9 @@ import { colors } from "@/theme";
 export default function DayReport() {
   // null = today (by the server clock); otherwise start of a Moscow day, ms
   const [dayMs, setDayMs] = useState<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-  // server clock minus phone clock: the phone time can be wrong
+  const [tick, setTick] = useState(() => Date.now());
+  // server clock minus phone clock (the phone time can be wrong). Days without
+  // entries carry no server time, so the last known value is kept.
   const offsetRef = useRef(0);
 
   const { data, loading, refreshing, error, refresh } = useReport(
@@ -39,24 +40,20 @@ export default function DayReport() {
       const entries = await dayOverview(
         dayMs === null ? null : mskDateString(dayMs),
       );
-      return { entries, fetchedAt: Date.now() };
+      const fetchedAt = Date.now();
+      if (entries[0]) {
+        offsetRef.current = Date.parse(entries[0].server_now) - fetchedAt;
+      }
+      return { entries, fetchedAt, clockOffset: offsetRef.current };
     },
     String(dayMs),
     dayMs === null ? 60_000 : null, // only today changes
   );
   const entries = data?.entries ?? [];
 
-  // the first row carries the server clock; remember it for the durations
-  useEffect(() => {
-    if (!data) return;
-    if (data.entries[0]) {
-      offsetRef.current =
-        Date.parse(data.entries[0].server_now) - data.fetchedAt;
-    }
-    setNow(Date.now());
-  }, [data]);
-
-  const serverNow = now + offsetRef.current;
+  // current time: the 30 s tick, or the moment of the last load if later
+  const now = Math.max(tick, data?.fetchedAt ?? 0);
+  const serverNow = now + (data?.clockOffset ?? 0);
   const today = mskDayStart(serverNow);
   const day = dayMs ?? today;
   const isToday = day === today;
@@ -64,8 +61,8 @@ export default function DayReport() {
   // keep running durations fresh (only today changes)
   useEffect(() => {
     if (!isToday) return;
-    const tick = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(tick);
+    const id = setInterval(() => setTick(Date.now()), 30_000);
+    return () => clearInterval(id);
   }, [isToday]);
 
   const goTo = (ms: number) => setDayMs(ms >= today ? null : ms);

@@ -8,6 +8,7 @@ function loadNfc(): typeof NfcLib {
   if (!NativeModules.NfcManager) {
     throw new NfcError("NFC недоступен в этой сборке. Нужен dev build.");
   }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require("react-native-nfc-manager");
 }
 

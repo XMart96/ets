@@ -111,6 +111,8 @@ export default function PeriodReport({ kind }: { kind: "week" | "month" }) {
   // 0 = current week / month, -1 = previous, ...
   const [offset, setOffset] = useState(0);
 
+  // recomputed on every render so the current week / month rolls over
+  // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   let period: Period;
   let label: string;

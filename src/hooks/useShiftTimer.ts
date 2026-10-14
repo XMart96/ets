@@ -30,7 +30,9 @@ const SHIFT_KEY = "shift_state";
  */
 export function useShiftTimer() {
   const [active, setActive] = useState<ActiveTimer | null>(null);
-  const [daySeconds, setDaySeconds] = useState(0);
+  // server clock minus phone clock, and the phone time of the last tick
+  const [clockOffset, setClockOffset] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ export function useShiftTimer() {
   const [restored, setRestored] = useState(false);
   const [userName, setUserName] = useState("");
 
-  // server clock minus phone clock: the phone time can be changed by the user
+  // the same offset for async callbacks (the phone time can be changed by the user)
   const offsetRef = useRef(0);
   const closedRef = useRef(0);
 
@@ -103,6 +105,12 @@ export function useShiftTimer() {
     ).catch(() => {});
   }, [restored, shiftOffset, pausedClinicId]);
 
+  const activate = (timer: ActiveTimer, offset: number) => {
+    setClockOffset(offset);
+    setNow(Date.now());
+    setActive(timer);
+  };
+
   // Resume a running timer after app restart
   useEffect(() => {
     (async () => {
@@ -110,11 +118,14 @@ export function useShiftTimer() {
         const entry = await getActiveTimer();
         if (entry) {
           offsetRef.current = entry.clockOffset;
-          setActive({
-            clinicId: entry.clinicId,
-            startedAt: entry.startedAt,
-            clinicName: await getClinicName(entry.clinicId),
-          });
+          activate(
+            {
+              clinicId: entry.clinicId,
+              startedAt: entry.startedAt,
+              clinicName: await getClinicName(entry.clinicId),
+            },
+            entry.clockOffset,
+          );
         }
       } catch {
         // offline: the screen stays idle
@@ -124,25 +135,17 @@ export function useShiftTimer() {
     })();
   }, [refreshToday]);
 
+  // Ticks once a second while a timer is running
   useEffect(() => {
-    if (!active) {
-      setDaySeconds(closedSeconds);
-      return;
-    }
-    const tick = () =>
-      setDaySeconds(
-        closedSeconds +
-          Math.max(
-            0,
-            Math.floor(
-              (Date.now() + offsetRef.current - active.startedAt) / 1000,
-            ),
-          ),
-      );
-    tick();
-    const id = setInterval(tick, 1000);
+    if (!active) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [active, closedSeconds]);
+  }, [active]);
+
+  const running = active
+    ? Math.max(0, Math.floor((now + clockOffset - active.startedAt) / 1000))
+    : 0;
+  const daySeconds = closedSeconds + running;
 
   const startWithClinic = useCallback(
     async (clinicId: string) => {
@@ -156,11 +159,14 @@ export function useShiftTimer() {
       offsetRef.current = entry.clockOffset;
       await refreshToday();
       setPausedClinicId(null);
-      setActive({
-        clinicId,
-        startedAt: entry.startedAt,
-        clinicName: await getClinicName(clinicId),
-      });
+      activate(
+        {
+          clinicId,
+          startedAt: entry.startedAt,
+          clinicName: await getClinicName(clinicId),
+        },
+        entry.clockOffset,
+      );
     },
     [refreshToday],
   );
