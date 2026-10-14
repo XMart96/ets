@@ -1,0 +1,255 @@
+import { getClinicName } from "@/api/clinics";
+import { errorText } from "@/api/errors";
+import { getMyProfile } from "@/api/profile";
+import {
+  getActiveTimer,
+  getClosedSecondsSince,
+  startTimer,
+  stopTimer,
+} from "@/api/timer";
+import { cancelNfcScan, NfcError, readClinicId } from "@/lib/nfc";
+import { mskDateString, mskDayStart } from "@/lib/msk";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
+
+type ActiveTimer = {
+  clinicId: string;
+  startedAt: number; // server timestamp, ms
+  clinicName: string | null;
+};
+
+const SHIFT_KEY = "shift_state";
+
+/**
+ * State and actions of the employee's timer screen. A shift is a series of
+ * server entries: start / resume opens one (NFC tap), pause closes it, finish
+ * closes it and resets the big timer. "Today" is the Moscow day, like in the
+ * director's reports.
+ */
+export function useShiftTimer() {
+  const [active, setActive] = useState<ActiveTimer | null>(null);
+  const [daySeconds, setDaySeconds] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // Paused: the entry is closed on the server, "resume" opens a new one in the
+  // same clinic. Kept on the phone only.
+  const [pausedClinicId, setPausedClinicId] = useState<string | null>(null);
+  // Sum of today's closed entries, seconds
+  const [closedSeconds, setClosedSeconds] = useState(0);
+  // Today's worked time when the last shift was finished: the big timer shows
+  // only the current shift, the line at the top shows the whole day
+  const [shiftOffset, setShiftOffset] = useState(0);
+  const [restored, setRestored] = useState(false);
+  const [userName, setUserName] = useState("");
+
+  // server clock minus phone clock: the phone time can be changed by the user
+  const offsetRef = useRef(0);
+  const closedRef = useRef(0);
+
+  // Reload on focus: the name can change on the profile edit screen
+  useFocusEffect(
+    useCallback(() => {
+      getMyProfile()
+        .then((profile) => {
+          if (profile) setUserName(profile.firstName);
+        })
+        .catch(() => {});
+    }, []),
+  );
+
+  // Today's worked time = sum of all today's entries (closed ones here, the
+  // running one is added by the ticker). On a failed request keeps the old value.
+  const refreshToday = useCallback(async () => {
+    try {
+      const dayStart = mskDayStart(Date.now() + offsetRef.current);
+      const closed = await getClosedSecondsSince(dayStart);
+      closedRef.current = closed;
+      setClosedSeconds(closed);
+      return closed;
+    } catch {
+      return closedRef.current;
+    }
+  }, []);
+
+  // Restore the paused / finished-shift state saved earlier today
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SHIFT_KEY);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved?.day === mskDateString(Date.now())) {
+          setShiftOffset(saved.offset ?? 0);
+          setPausedClinicId(saved.pausedClinicId ?? null);
+        }
+      } catch {
+        // nothing saved
+      }
+      setRestored(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    AsyncStorage.setItem(
+      SHIFT_KEY,
+      JSON.stringify({
+        day: mskDateString(Date.now()),
+        offset: shiftOffset,
+        pausedClinicId,
+      }),
+    ).catch(() => {});
+  }, [restored, shiftOffset, pausedClinicId]);
+
+  // Resume a running timer after app restart
+  useEffect(() => {
+    (async () => {
+      try {
+        const entry = await getActiveTimer();
+        if (entry) {
+          offsetRef.current = entry.clockOffset;
+          setActive({
+            clinicId: entry.clinicId,
+            startedAt: entry.startedAt,
+            clinicName: await getClinicName(entry.clinicId),
+          });
+        }
+      } catch {
+        // offline: the screen stays idle
+      }
+      await refreshToday();
+      setLoading(false);
+    })();
+  }, [refreshToday]);
+
+  useEffect(() => {
+    if (!active) {
+      setDaySeconds(closedSeconds);
+      return;
+    }
+    const tick = () =>
+      setDaySeconds(
+        closedSeconds +
+          Math.max(
+            0,
+            Math.floor(
+              (Date.now() + offsetRef.current - active.startedAt) / 1000,
+            ),
+          ),
+      );
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [active, closedSeconds]);
+
+  const startWithClinic = useCallback(
+    async (clinicId: string) => {
+      let entry;
+      try {
+        entry = await startTimer(clinicId);
+      } catch (e) {
+        Alert.alert("Не удалось начать", errorText(e));
+        return;
+      }
+      offsetRef.current = entry.clockOffset;
+      await refreshToday();
+      setPausedClinicId(null);
+      setActive({
+        clinicId,
+        startedAt: entry.startedAt,
+        clinicName: await getClinicName(clinicId),
+      });
+    },
+    [refreshToday],
+  );
+
+  // Start or resume: needs an NFC tap
+  const start = async () => {
+    setScanning(true);
+    try {
+      const clinicId = await readClinicId();
+      // After a pause the shift can only continue in the same clinic; to work
+      // in another one the shift has to be finished first
+      if (pausedClinicId && clinicId !== pausedClinicId) {
+        const name = await getClinicName(pausedClinicId);
+        Alert.alert(
+          "Другая клиника",
+          `Вы начали смену${name ? ` в клинике «${name}»` : ""}. Чтобы начать в другой клинике, сначала завершите смену.`,
+        );
+        return;
+      }
+      await startWithClinic(clinicId);
+    } catch (e) {
+      // A cancelled scan is not an error worth showing
+      if (e instanceof NfcError) {
+        Alert.alert("Метка не считана", e.message);
+      }
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const cancelScan = async () => {
+    await cancelNfcScan();
+    setScanning(false);
+  };
+
+  // Closes the running entry on the server and refreshes today's total
+  const closeEntry = async () => {
+    try {
+      await stopTimer();
+    } catch (e) {
+      Alert.alert("Не удалось остановить", errorText(e));
+      return null;
+    }
+    return refreshToday();
+  };
+
+  const pause = async () => {
+    if (!active) return;
+    setBusy(true);
+    const clinicId = active.clinicId;
+    if ((await closeEntry()) !== null) {
+      setActive(null);
+      setPausedClinicId(clinicId);
+    }
+    setBusy(false);
+  };
+
+  const finishShift = async () => {
+    setBusy(true);
+    const total = active ? await closeEntry() : closedSeconds;
+    if (total !== null) {
+      setActive(null);
+      setPausedClinicId(null);
+      // restart the big timer from zero; the day total stays
+      setShiftOffset(total);
+    }
+    setBusy(false);
+  };
+
+  const finish = () => {
+    Alert.alert("Завершить смену?", "Таймер будет остановлен.", [
+      { text: "Отмена", style: "cancel" },
+      { text: "Завершить", style: "destructive", onPress: finishShift },
+    ]);
+  };
+
+  return {
+    userName,
+    active,
+    loading,
+    scanning,
+    busy,
+    isRunning: active !== null,
+    isPaused: pausedClinicId !== null,
+    daySeconds,
+    shiftSeconds: Math.max(0, daySeconds - shiftOffset),
+    start,
+    cancelScan,
+    pause,
+    finish,
+  };
+}

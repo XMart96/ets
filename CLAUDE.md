@@ -6,14 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm install`, `npm start` (`expo start`), `npm run lint` (`expo lint`). No test runner is set up (tests deferred until requirements are agreed; later jest-expo). Type-check with `npx tsc --noEmit`.
+- `npm install`, `npm start` (`expo start`). `npm run lint` needs `eslint` + `eslint-config-expo`, which are not installed (`expo lint` offers to install them and edits `package.json`). No test runner is set up (tests deferred until requirements are agreed; later jest-expo). Type-check with `npx tsc --noEmit` (add `--noUnusedLocals` to catch dead imports). To check that Metro bundles (aliases, compiler) without a device: `npx expo export --platform android --output-dir <tmp>`.
 - NFC (`react-native-nfc-manager`) does not work in Expo Go. Use a dev build: `npx expo run:android` or EAS (`eas.json` profiles: `development` / `preview` build Android APKs). UI-only work can still be checked in Expo Go (NFC is loaded lazily, see below).
 - Env (in `.env`, gitignored): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 - DB changes are SQL files in `supabase/migrations/` (dated names like `20261014_*.sql`), applied to the hosted Supabase project manually / via the Supabase MCP. There is no local Supabase stack.
 
 ## Architecture
 
-Expo SDK 57 + expo-router (file-based, typed routes, React Compiler enabled), TypeScript strict, path alias `@/*` -> `src/*` (existing code mostly uses relative imports). All UI strings are Russian. Screens are in `src/app/`, shared UI in `src/components/` (`Button`, `Input`, `KeyboardScrollView`, `Loader`, `AuthHeader`), helpers in `src/lib/`.
+Expo SDK 57 + expo-router (file-based, typed routes, React Compiler enabled), TypeScript strict. Imports use the `@/*` -> `src/*` alias (siblings in the same folder use `./`). All UI strings are Russian. Layout of `src/`:
+- `app/` screens only; logic lives in hooks/api. `components/` shared UI (`components/admin/` = director report pieces and their shared `styles.ts`).
+- `api/` the only place that calls `supabase.*` (auth, profile, clinics, timer, admin). Functions return typed data and throw `ApiError`; screens show `errorText(e)` (`api/errors.ts` maps SQL exception codes / auth codes to Russian texts: add new codes there).
+- `hooks/` `useShiftTimer` (employee timer state machine), `useReport` (load/refresh/poll for admin reports, drops stale responses).
+- `lib/` `supabase.ts` (typed client), `msk.ts` (Moscow-time helpers), `report.ts` (per-day breakdown), `nfc.ts`, `authLink.ts`. `theme.ts` colors (no hex literals in components). Icons: only `lucide-react-native` (no Ionicons / `@expo/vector-icons` / `expo-symbols`; those packages were removed). `types/database.ts` is generated from the Supabase schema (regenerate after migrations; it types nullable RPC columns like `ended_at` as non-null, `api/admin.ts` overrides that).
 
 **No custom backend: all business logic is Postgres RPCs / RLS in Supabase** (`supabase.rpc(...)` from screens; client in `src/lib/supabase.ts`, session persisted in AsyncStorage).
 - `time_entries` (user_id, clinic_id, started_at, ended_at). A partial unique index allows one open entry (`ended_at is null`) per user. Server `now()` sets `started_at`/`ended_at`; the phone clock is never trusted.
@@ -24,7 +28,7 @@ Expo SDK 57 + expo-router (file-based, typed routes, React Compiler enabled), Ty
 
 **Routing/auth flow**: `index.tsx` is login; after sign-in it routes by profile: no profile -> `/profile-setup`, role `root` -> `/admin`, else `/timer`. `_layout.tsx` handles the email-confirmation deep link (`src/lib/authLink.ts`, `auth/callback`, `verify-email`), so the link works even before the callback screen mounts.
 
-**Timer screen (`timer.tsx`)**: Start/resume requires an NFC tap; the tag holds the clinic UUID as an NDEF text record (`src/lib/nfc.ts` `readClinicId`, validates UUID). "Pause" closes the server entry and "resume" opens a new one (must be in the same clinic as the paused one); paused/finished-shift state is saved locally for the day. Active entry is restored from `get_active_timer` on app start. `nfc.ts` uses lazy `require` guarded by `NativeModules.NfcManager` because importing the library in Expo Go crashes with a red screen even inside try/catch.
+**Timer (`app/timer.tsx` + `hooks/useShiftTimer.ts`)**: "Today" is the Moscow day (same as the reports). Start/resume requires an NFC tap; the tag holds the clinic UUID as an NDEF text record (`src/lib/nfc.ts` `readClinicId`, validates UUID). "Pause" closes the server entry and "resume" opens a new one (must be in the same clinic as the paused one); paused/finished-shift state is saved locally for the day. Active entry is restored from `get_active_timer` on app start. `nfc.ts` uses lazy `require` guarded by `NativeModules.NfcManager` because importing the library in Expo Go crashes with a red screen even inside try/catch.
 
 ## Product decisions
 

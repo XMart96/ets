@@ -1,6 +1,7 @@
 import { LoaderCircle } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleProp, ViewStyle } from "react-native";
+import { colors } from "@/theme";
 
 interface LoaderProps {
   size?: number;
@@ -11,7 +12,7 @@ interface LoaderProps {
 // Spinning lucide icon; the rotation runs on the native driver.
 export default function Loader({
   size = 32,
-  color = "#65BCE6",
+  color = colors.primary,
   style,
 }: LoaderProps) {
   const rotation = useRef(new Animated.Value(0)).current;

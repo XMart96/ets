@@ -8,6 +8,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { colors } from "@/theme";
 
 type Variant = "primary" | "secondary" | "danger";
 
@@ -44,10 +45,10 @@ export default function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={colors.white} />
       ) : (
         <View style={styles.content}>
-          {Icon ? <Icon size={18} color="#fff" /> : null}
+          {Icon ? <Icon size={18} color={colors.white} /> : null}
           <Text style={styles.text} numberOfLines={1} adjustsFontSizeToFit>
             {title}
           </Text>
@@ -65,11 +66,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primary: { backgroundColor: "#65BCE6" },
-  secondary: { backgroundColor: "#64748b" },
-  danger: { backgroundColor: "#dc2626" },
+  primary: { backgroundColor: colors.primary },
+  secondary: { backgroundColor: colors.secondary },
+  danger: { backgroundColor: colors.danger },
   content: { flexDirection: "row", alignItems: "center", gap: 8 },
   pressed: { opacity: 0.8 },
   disabled: { opacity: 0.5 },
-  text: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  text: { color: colors.white, fontSize: 16, fontWeight: "600" },
 });

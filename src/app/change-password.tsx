@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, Text } from "react-native";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import KeyboardScrollView from "../components/KeyboardScrollView";
-import { supabase } from "../lib/supabase";
+import { changePassword } from "@/api/auth";
+import { errorText } from "@/api/errors";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
 
 export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -32,34 +33,12 @@ export default function ChangePassword() {
 
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const email = userData.user?.email;
-      if (!email) {
-        Alert.alert("Ошибка", "Войдите в аккаунт заново");
-        return;
-      }
-
-      // Confirm the current password before changing it
-      const { error: checkError } = await supabase.auth.signInWithPassword({
-        email,
-        password: currentPassword,
-      });
-      if (checkError) {
-        Alert.alert("Ошибка", "Текущий пароль неверный");
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        Alert.alert("Не удалось сменить пароль", error.message);
-        return;
-      }
-
+      await changePassword(currentPassword, password);
       Alert.alert("Готово", "Пароль изменён", [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch {
-      Alert.alert("Ошибка", "Не удалось сменить пароль. Проверьте интернет.");
+    } catch (e) {
+      Alert.alert("Не удалось сменить пароль", errorText(e));
     } finally {
       setSaving(false);
     }

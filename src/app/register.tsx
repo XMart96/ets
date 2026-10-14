@@ -6,11 +6,13 @@ import {
   Text,
   View,
 } from "react-native";
-import AuthHeader from "../components/AuthHeader";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import KeyboardScrollView from "../components/KeyboardScrollView";
-import { REDIRECT_URL, supabase } from "../lib/supabase";
+import { signUp } from "@/api/auth";
+import { ApiError, errorText } from "@/api/errors";
+import AuthHeader from "@/components/AuthHeader";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
+import { colors } from "@/theme";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -34,36 +36,21 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { emailRedirectTo: REDIRECT_URL },
-      });
+      const result = await signUp(email.trim(), password);
 
-      if (error) {
-        Alert.alert("Ошибка регистрации", error.message);
-        return;
-      }
-
-      // For an already registered email Supabase returns no error but a user
-      // without identities, and sends no code.
-      if (data.user && data.user.identities?.length === 0) {
-        Alert.alert("Ошибка", "Этот email уже зарегистрирован. Войдите.");
-        return;
-      }
-
-      // "Confirm email" off: signed in right away
-      if (data.session) {
+      if (result === "already_registered") {
+        Alert.alert("Ошибка", errorText(new ApiError("user_already_exists")));
+      } else if (result === "signed_in") {
+        // "Confirm email" off: signed in right away
         router.replace("/profile-setup");
-        return;
+      } else {
+        router.push({
+          pathname: "/verify-email",
+          params: { email: email.trim() },
+        });
       }
-
-      router.push({
-        pathname: "/verify-email",
-        params: { email: email.trim() },
-      });
-    } catch {
-      Alert.alert("Ошибка", "Не удалось подключиться. Проверьте интернет.");
+    } catch (e) {
+      Alert.alert("Ошибка регистрации", errorText(e));
     } finally {
       setLoading(false);
     }
@@ -140,11 +127,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: "#333",
+    color: colors.text,
   },
   link: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#65BCE6",
+    color: colors.primary,
   },
 });

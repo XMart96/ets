@@ -2,8 +2,9 @@ import * as Linking from "expo-linking";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Loader from "../../components/Loader";
-import { handleAuthUrl, isAuthLink } from "../../lib/authLink";
+import Loader from "@/components/Loader";
+import { handleAuthUrl, isAuthLink } from "@/lib/authLink";
+import { colors } from "@/theme";
 
 const TIMEOUT_MS = 10_000;
 
@@ -68,5 +69,5 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   text: { textAlign: "center", fontSize: 16 },
-  link: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+  link: { fontSize: 16, fontWeight: "600", color: colors.link },
 });

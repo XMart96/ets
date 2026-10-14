@@ -6,11 +6,14 @@ import {
   Text,
   View,
 } from "react-native";
-import AuthHeader from "../components/AuthHeader";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import KeyboardScrollView from "../components/KeyboardScrollView";
-import { REDIRECT_URL, supabase } from "../lib/supabase";
+import { currentUserId, signIn } from "@/api/auth";
+import { ApiError, errorText } from "@/api/errors";
+import { getMyProfile } from "@/api/profile";
+import AuthHeader from "@/components/AuthHeader";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
+import { colors } from "@/theme";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -20,20 +23,16 @@ export default function Login() {
   // Signed in: director goes to the report, employee to the timer if the
   // profile is filled in, profile setup otherwise.
   const routeAfterAuth = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-    if (!data) router.replace("/profile-setup");
-    else router.replace(data.role === "root" ? "/admin" : "/timer");
+    const profile = await getMyProfile(userId);
+    if (!profile) router.replace("/profile-setup");
+    else router.replace(profile.role === "root" ? "/admin" : "/timer");
   };
 
   // Already signed in: skip the login screen.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) routeAfterAuth(data.session.user.id);
-    });
+    currentUserId()
+      .then((id) => (id ? routeAfterAuth(id) : undefined))
+      .catch(() => {});
   }, []);
 
   const handleLogin = async () => {
@@ -44,32 +43,18 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-
-      if (error) {
-        // Registered but never confirmed: send a fresh link
-        if (error.code === "email_not_confirmed") {
-          await supabase.auth.resend({
-            type: "signup",
-            email: email.trim(),
-            options: { emailRedirectTo: REDIRECT_URL },
-          });
-          router.push({
-            pathname: "/verify-email",
-            params: { email: email.trim() },
-          });
-          return;
-        }
-        Alert.alert("Ошибка входа", error.message);
+      const user = await signIn(email.trim(), password);
+      await routeAfterAuth(user.id);
+    } catch (e) {
+      // Registered but never confirmed: signIn already sent a fresh link
+      if (e instanceof ApiError && e.code === "email_not_confirmed") {
+        router.push({
+          pathname: "/verify-email",
+          params: { email: email.trim() },
+        });
         return;
       }
-
-      await routeAfterAuth(data.user.id);
-    } catch {
-      Alert.alert("Ошибка", "Не удалось подключиться. Проверьте интернет.");
+      Alert.alert("Ошибка входа", errorText(e));
     } finally {
       setLoading(false);
     }
@@ -133,11 +118,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: "#333",
+    color: colors.text,
   },
   link: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#65BCE6",
+    color: colors.primary,
   },
 });

@@ -2,7 +2,7 @@ import * as Linking from "expo-linking";
 import { Stack, router } from "expo-router";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { handleAuthUrl, isAuthLink } from "../lib/authLink";
+import { handleAuthUrl, isAuthLink } from "@/lib/authLink";
 
 export default function RootLayout() {
   // Email confirmation link: handled here, not in the callback screen, because

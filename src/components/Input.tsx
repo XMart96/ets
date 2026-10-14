@@ -6,6 +6,7 @@ import {
   TextInputProps,
   View,
 } from "react-native";
+import { colors } from "@/theme";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -22,7 +23,7 @@ const Input = forwardRef<TextInput, InputProps>(function Input(
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         ref={ref}
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.placeholder}
         {...rest}
         style={[styles.input, focused && styles.inputFocused, style]}
         onFocus={(e) => {
@@ -47,16 +48,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: colors.borderInput,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
   },
   inputFocused: {
-    borderColor: "#65BCE6",
+    borderColor: colors.primary,
   },
 });

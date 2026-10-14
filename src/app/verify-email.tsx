@@ -1,8 +1,10 @@
 import { Link, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import Button from "../components/Button";
-import { REDIRECT_URL, supabase } from "../lib/supabase";
+import { resendConfirmation } from "@/api/auth";
+import { errorText } from "@/api/errors";
+import Button from "@/components/Button";
+import { colors } from "@/theme";
 
 const RESEND_SECONDS = 60;
 
@@ -17,13 +19,10 @@ export default function VerifyEmail() {
   }, [cooldown]);
 
   const handleResend = async () => {
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: REDIRECT_URL },
-    });
-    if (error) {
-      Alert.alert("Не удалось отправить", error.message);
+    try {
+      await resendConfirmation(email);
+    } catch (e) {
+      Alert.alert("Не удалось отправить", errorText(e));
       return;
     }
     setCooldown(RESEND_SECONDS);
@@ -66,12 +65,12 @@ export default function VerifyEmail() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 20, gap: 16 },
   title: { fontSize: 22, fontWeight: "700", textAlign: "center" },
-  text: { fontSize: 16, color: "#666", textAlign: "center", lineHeight: 24 },
+  text: { fontSize: 16, color: colors.muted, textAlign: "center", lineHeight: 24 },
   email: { fontSize: 16, fontWeight: "600", textAlign: "center" },
   link: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#007AFF",
+    color: colors.link,
     textAlign: "center",
     marginTop: 10,
   },

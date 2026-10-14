@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, Text } from "react-native";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import KeyboardScrollView from "../components/KeyboardScrollView";
-import { supabase } from "../lib/supabase";
+import { errorText } from "@/api/errors";
+import { createProfile } from "@/api/profile";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
 
 export default function ProfileSetup() {
   const [firstName, setFirstName] = useState("");
@@ -18,28 +19,14 @@ export default function ProfileSetup() {
     }
 
     setSaving(true);
-
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) {
-      Alert.alert("Ошибка", "Не удалось получить пользователя");
+    try {
+      await createProfile(firstName.trim(), lastName.trim());
+      router.replace("/timer");
+    } catch (e) {
+      Alert.alert("Ошибка сохранения", errorText(e));
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const { error } = await supabase.from("profiles").insert({
-      id: userData.user.id,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-    });
-
-    setSaving(false);
-
-    if (error) {
-      Alert.alert("Ошибка сохранения", error.message);
-      return;
-    }
-
-    router.replace("/timer");
   };
 
   return (

@@ -2,11 +2,14 @@ import { router } from "expo-router";
 import { KeyRound, LogOut, Save, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import Loader from "../components/Loader";
-import KeyboardScrollView from "../components/KeyboardScrollView";
-import { supabase } from "../lib/supabase";
+import { signOut as signOutUser } from "@/api/auth";
+import { errorText } from "@/api/errors";
+import { getMyProfile, updateProfile } from "@/api/profile";
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Loader from "@/components/Loader";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
+import { colors } from "@/theme";
 
 export default function ProfileEdit() {
   const [firstName, setFirstName] = useState("");
@@ -16,25 +19,15 @@ export default function ProfileEdit() {
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", userData.user.id)
-        .single();
-
-      if (!error && data) {
-        setFirstName(data.first_name);
-        setLastName(data.last_name);
-      }
-      setLoading(false);
-    })();
+    getMyProfile()
+      .then((profile) => {
+        if (profile) {
+          setFirstName(profile.firstName);
+          setLastName(profile.lastName);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const handleSave = async () => {
@@ -45,25 +38,10 @@ export default function ProfileEdit() {
 
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-        })
-        .eq("id", userData.user.id);
-
-      if (error) {
-        Alert.alert("Ошибка сохранения", error.message);
-        return;
-      }
-
+      await updateProfile(firstName.trim(), lastName.trim());
       router.back();
-    } catch {
-      Alert.alert("Ошибка", "Не удалось сохранить. Проверьте интернет.");
+    } catch (e) {
+      Alert.alert("Ошибка сохранения", errorText(e));
     } finally {
       setSaving(false);
     }
@@ -72,14 +50,10 @@ export default function ProfileEdit() {
   const signOut = async () => {
     setSigningOut(true);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        Alert.alert("Ошибка выхода", error.message);
-        return;
-      }
+      await signOutUser();
       router.replace("/");
-    } catch {
-      Alert.alert("Ошибка", "Не удалось выйти. Проверьте интернет.");
+    } catch (e) {
+      Alert.alert("Ошибка выхода", errorText(e));
     } finally {
       setSigningOut(false);
     }
@@ -161,6 +135,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopColor: colors.borderLight,
   },
 });

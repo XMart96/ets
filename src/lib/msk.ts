@@ -102,3 +102,11 @@ export const formatWeek = (from: number) => {
       : `${a.getUTCDate()} ${MONTHS_SHORT[a.getUTCMonth()]}`;
   return `${left} – ${b.getUTCDate()} ${MONTHS_SHORT[b.getUTCMonth()]} ${b.getUTCFullYear()}`;
 };
+
+/** "HH:MM:SS" for a running timer. */
+export const formatTimer = (totalSeconds: number) => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+};

@@ -1,5 +1,6 @@
 // components/AuthHeader.tsx
 import { Image, StyleSheet, Text, View } from "react-native";
+import { colors } from "@/theme";
 
 interface AuthHeaderProps {
   title: string;
@@ -32,6 +33,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     textAlign: "center",
-    color: "#65BCE6",
+    color: colors.primary,
   },
 });
