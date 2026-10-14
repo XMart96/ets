@@ -2,7 +2,11 @@
 
 # dependencies
 node_modules/
+
+# env files (keep an example file tracked)
 .env
+.env.*
+!.env.example
 
 # Expo
 .expo/
@@ -10,14 +14,26 @@ dist/
 web-build/
 expo-env.d.ts
 
+# generated native folders
+/ios
+/android
+
 # Native
 .kotlin/
 *.orig.*
+
+# signing keys and certificates
 *.jks
 *.p8
 *.p12
 *.key
+*.pem
 *.mobileprovision
+
+# build artifacts
+*.apk
+*.aab
+*.ipa
 
 # Metro
 .metro-health-check*
@@ -27,38 +43,18 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-.env
-
 # typescript
 *.tsbuildinfo
 
-example
-
-# generated native folders
-/ios
-/android
-
-# Supabase (local SQL migrations, kept out of the repo)
-supabase/
-
-# env files (keep an example file tracked)
-.env.*
-!.env.example
-
-# build artifacts
-*.apk
-*.aab
-*.ipa
+# macOS
+.DS_Store
 
 # editors / local tooling
 .idea/
 .claude/settings.local.json
 
-# Claude project notes (local only)
-CLAUDE.md
+# Claude personal notes (CLAUDE.md and AGENTS.md are tracked)
+CLAUDE.local.md
+
+# misc
+example
