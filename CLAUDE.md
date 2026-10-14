@@ -22,7 +22,7 @@ Expo SDK 57 + expo-router (file-based, typed routes, React Compiler enabled), Ty
 **No custom backend: all business logic is Postgres RPCs / RLS in Supabase** (`supabase.rpc(...)` from screens; client in `src/lib/supabase.ts`, session persisted in AsyncStorage).
 - `time_entries` (user_id, clinic_id, started_at, ended_at). A partial unique index allows one open entry (`ended_at is null`) per user. Server `now()` sets `started_at`/`ended_at`; the phone clock is never trusted.
 - Employee RPCs: `start_timer(clinic_id)`, `stop_timer()`, `get_active_timer()` (returns `server_now` so the client can correct clock skew). Errors are raised as exception codes (`timer_already_running`, `no_active_timer`, `clinic_not_found`, `profile_missing`, ...) that the UI maps to messages.
-- Admin ("root" role, `profiles.role`) RPCs: `day_overview`, `period_report`, `period_entries` (plus older `today_overview`, `monthly_report`); each checks `public.is_root()` and raises `forbidden`. Day/week/month boundaries are computed in `Europe/Moscow`. The client mirrors this in `src/lib/msk.ts` (fixed UTC+3).
+- Admin ("root" role, `profiles.role`) RPCs: `day_overview`, `period_report`, `period_entries`; each checks `public.is_root()` and raises `forbidden`. Day/week/month boundaries are computed in `Europe/Moscow`. The client mirrors this in `src/lib/msk.ts` (fixed UTC+3).
 - `profiles` grants are column-restricted so users can't change their own `role`; role is only set in the DB.
 - Functions are `security definer` with `set search_path = ''`; keep that pattern in new migrations (and revoke from `public, anon`, grant to `authenticated`).
 

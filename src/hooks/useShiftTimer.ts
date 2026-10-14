@@ -3,7 +3,7 @@ import { errorText } from "@/api/errors";
 import { getMyProfile } from "@/api/profile";
 import {
   getActiveTimer,
-  getClosedSecondsSince,
+  getClosedMsSince,
   startTimer,
   stopTimer,
 } from "@/api/timer";
@@ -49,7 +49,10 @@ export function useShiftTimer() {
 
   // the same offset for async callbacks (the phone time can be changed by the user)
   const offsetRef = useRef(0);
-  const closedRef = useRef(0);
+  // Closed time of the Moscow day `closedDayRef` (start of that day, ms). Kept
+  // up to date locally on pause / finish; reloaded when the day has changed.
+  const closedMsRef = useRef(0);
+  const closedDayRef = useRef<number | null>(null);
 
   // Reload on focus: the name can change on the profile edit screen
   useFocusEffect(
@@ -62,19 +65,24 @@ export function useShiftTimer() {
     }, []),
   );
 
+  const setClosed = useCallback((ms: number, dayStart: number) => {
+    closedMsRef.current = ms;
+    closedDayRef.current = dayStart;
+    const seconds = Math.floor(ms / 1000);
+    setClosedSeconds(seconds);
+    return seconds;
+  }, []);
+
   // Today's worked time = sum of all today's entries (closed ones here, the
   // running one is added by the ticker). On a failed request keeps the old value.
   const refreshToday = useCallback(async () => {
     try {
       const dayStart = mskDayStart(Date.now() + offsetRef.current);
-      const closed = await getClosedSecondsSince(dayStart);
-      closedRef.current = closed;
-      setClosedSeconds(closed);
-      return closed;
+      return setClosed(await getClosedMsSince(dayStart), dayStart);
     } catch {
-      return closedRef.current;
+      return Math.floor(closedMsRef.current / 1000);
     }
-  }, []);
+  }, [setClosed]);
 
   // Restore the paused / finished-shift state saved earlier today
   useEffect(() => {
@@ -157,7 +165,10 @@ export function useShiftTimer() {
         return;
       }
       offsetRef.current = entry.clockOffset;
-      await refreshToday();
+      // The total is already known; reload only if the app stayed open past midnight
+      if (closedDayRef.current !== mskDayStart(Date.now() + entry.clockOffset)) {
+        await refreshToday();
+      }
       setPausedClinicId(null);
       activate(
         {
@@ -202,15 +213,20 @@ export function useShiftTimer() {
     setScanning(false);
   };
 
-  // Closes the running entry on the server and refreshes today's total
+  // Closes the running entry on the server and adds it to today's total
+  // (without a request, unless the entry ended on another day than the total)
   const closeEntry = async () => {
+    let entry;
     try {
-      await stopTimer();
+      entry = await stopTimer();
     } catch (e) {
       Alert.alert("Не удалось остановить", errorText(e));
       return null;
     }
-    return refreshToday();
+    const dayStart = mskDayStart(entry.endedAt);
+    if (closedDayRef.current !== dayStart) return refreshToday();
+    const added = Math.max(0, entry.endedAt - Math.max(entry.startedAt, dayStart));
+    return setClosed(closedMsRef.current + added, dayStart);
   };
 
   const pause = async () => {

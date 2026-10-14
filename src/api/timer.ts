@@ -33,15 +33,22 @@ export async function startTimer(clinicId: string) {
   };
 }
 
+/** Closes the running entry; returns its start and the server end time, ms. */
 export async function stopTimer() {
-  unwrap(await supabase.rpc("stop_timer"));
+  const rows = unwrap(await supabase.rpc("stop_timer"));
+  const row = rows?.[0];
+  if (!row) throw new Error("stop_timer returned no row");
+  return {
+    startedAt: Date.parse(row.started_at),
+    endedAt: Date.parse(row.ended_at),
+  };
 }
 
 /**
- * Seconds in closed entries since `dayStartMs` (clipped to it). The running
- * entry is not included.
+ * Milliseconds in closed entries since `dayStartMs` (clipped to it). The
+ * running entry is not included.
  */
-export async function getClosedSecondsSince(dayStartMs: number) {
+export async function getClosedMsSince(dayStartMs: number) {
   // Root can read everyone's entries, so filter by the current user
   const uid = await currentUserId();
   if (!uid) return 0;
@@ -57,5 +64,5 @@ export async function getClosedSecondsSince(dayStartMs: number) {
     const from = Math.max(Date.parse(e.started_at), dayStartMs);
     return sum + Math.max(0, Date.parse(e.ended_at!) - from);
   }, 0);
-  return Math.floor(total / 1000);
+  return total;
 }

@@ -19,26 +19,17 @@ export type Database = {
         Row: {
           created_at: string | null;
           id: string;
-          latitude: number;
-          longitude: number;
           name: string;
-          radius_meters: number;
         };
         Insert: {
           created_at?: string | null;
           id?: string;
-          latitude: number;
-          longitude: number;
           name: string;
-          radius_meters?: number;
         };
         Update: {
           created_at?: string | null;
           id?: string;
-          latitude?: number;
-          longitude?: number;
           name?: string;
-          radius_meters?: number;
         };
         Relationships: [];
       };
@@ -131,17 +122,6 @@ export type Database = {
         }[];
       };
       is_root: { Args: never; Returns: boolean };
-      monthly_report: {
-        Args: { p_month: string };
-        Returns: {
-          entries_count: number;
-          first_name: string;
-          has_active: boolean;
-          last_name: string;
-          total_seconds: number;
-          user_id: string;
-        }[];
-      };
       period_entries: {
         Args: { p_from: string; p_to: string; p_user_id: string };
         Returns: {
@@ -177,20 +157,6 @@ export type Database = {
           ended_at: string;
           entry_id: string;
           started_at: string;
-        }[];
-      };
-      today_overview: {
-        Args: never;
-        Returns: {
-          clinic_name: string;
-          day_start: string;
-          ended_at: string;
-          entry_id: string;
-          first_name: string;
-          last_name: string;
-          server_now: string;
-          started_at: string;
-          user_id: string;
         }[];
       };
     };
