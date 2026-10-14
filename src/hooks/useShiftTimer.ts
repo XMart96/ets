@@ -1,3 +1,4 @@
+import { currentUserId } from "@/api/auth";
 import { getClinicName } from "@/api/clinics";
 import { errorText } from "@/api/errors";
 import { getMyProfile } from "@/api/profile";
@@ -20,7 +21,9 @@ type ActiveTimer = {
   clinicName: string | null;
 };
 
-const SHIFT_KEY = "shift_state";
+// Paused / finished-shift state is kept per user: several accounts can use one phone
+const LEGACY_SHIFT_KEY = "shift_state"; // was shared by all users
+const shiftKey = (userId: string) => `shift_state:${userId}`;
 
 /**
  * State and actions of the employee's timer screen. A shift is a series of
@@ -45,6 +48,7 @@ export function useShiftTimer() {
   // only the current shift, the line at the top shows the whole day
   const [shiftOffset, setShiftOffset] = useState(0);
   const [restored, setRestored] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
 
   // the same offset for async callbacks (the phone time can be changed by the user)
@@ -88,7 +92,10 @@ export function useShiftTimer() {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(SHIFT_KEY);
+        AsyncStorage.removeItem(LEGACY_SHIFT_KEY).catch(() => {});
+        const uid = await currentUserId();
+        setUserId(uid);
+        const raw = uid ? await AsyncStorage.getItem(shiftKey(uid)) : null;
         const saved = raw ? JSON.parse(raw) : null;
         if (saved?.day === mskDateString(Date.now())) {
           setShiftOffset(saved.offset ?? 0);
@@ -102,16 +109,16 @@ export function useShiftTimer() {
   }, []);
 
   useEffect(() => {
-    if (!restored) return;
+    if (!restored || !userId) return;
     AsyncStorage.setItem(
-      SHIFT_KEY,
+      shiftKey(userId),
       JSON.stringify({
         day: mskDateString(Date.now()),
         offset: shiftOffset,
         pausedClinicId,
       }),
     ).catch(() => {});
-  }, [restored, shiftOffset, pausedClinicId]);
+  }, [restored, userId, shiftOffset, pausedClinicId]);
 
   const activate = (timer: ActiveTimer, offset: number) => {
     setClockOffset(offset);
